@@ -6,7 +6,8 @@ services:
         volumes:
             - "nginx-srv:/var/www/acme:ro"
         environment:
-            - "VIRTUAL_HOST={{ range $container := $containers }}{{ $container.Env.VIRTUAL_HOST }}{{ if ne $container last $containers }},{{ end }}{{ end }}"
+    {{ $last_cont := last $containers }}
+            - "VIRTUAL_HOST={{ range $container := $containers }}{{ $container.Env.VIRTUAL_HOST }}{{ if ne $container $last_cont }},{{ end }}{{ end }}"
         networks:
             - haproxy-net
 {{ end }}

@@ -14,7 +14,7 @@ services:
     image: alpine/haproxy
     volumes:
       - "haconfig:/etc/haproxy/:ro"
-      - "crt:/crt:ro"
+      - "/opt/docker/docker-gen-gateway/haproxy-crt:/crt"
     networks:
       - backend-net
     ports:
@@ -30,7 +30,7 @@ services:
       - "/opt/docker/docker-gen-gateway/templates:/etc/docker-gen/templates:ro"
       - "/opt/docker/docker-gen-gateway/cert:/etc/letsencrypt"
       - "/var/run/docker.sock:/tmp/docker.sock:ro"
-      - "crt:/crt"
+      - "/opt/docker/docker-gen-gateway/haproxy-crt:/crt"
       - "nginx-srv:/srv"
 
 networks:
@@ -40,4 +40,3 @@ networks:
 volumes:
   haconfig:
   nginx-srv:
-  crt:
