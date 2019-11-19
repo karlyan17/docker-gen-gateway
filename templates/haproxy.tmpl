@@ -1,0 +1,82 @@
+global
+	log         127.0.0.1 local2 info
+    pidfile     /var/run/haproxy.pid
+    maxconn     2000
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+    ssl-server-verify none
+
+
+defaults
+	mode               http
+    log                global
+    option             httplog
+    timeout connect    10s
+    timeout client     30s
+    timeout server     30s
+	
+{{ $outgoing_containers := whereExist $ "Env.VIRTUAL_HOST" }}
+{{ $http_containers := whereNotExist $outgoing_containers "Env.TLS" }}
+{{ $https_containers := whereExist $outgoing_containers "Env.TLS" }}
+
+############
+# Frontend #
+############
+
+frontend http_in
+	bind *:80
+{{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
+	acl http_{{ $host }} hdr_reg(host) -i {{ $host }}
+{{ end }}
+
+{{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
+	use_backend http_{{ $host }} if http_{{ $host }}
+{{ end }}
+
+
+frontend https_in
+	bind *:443 ssl crt /crt/cert.pem alpn h2,http/1.1
+{{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
+	acl https_{{ $host }} hdr(host) -i {{ $host }}
+{{ end }}
+
+{{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
+	use_backend https_{{ $host }} if https_{{ $host }}
+{{ end }}
+
+############
+# Backends #
+############
+
+{{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
+backend http_{{ $host }}
+	balance roundrobin
+    {{ range $index, $container := $containers }}
+        {{ $addrlen := len $container.Addresses }}
+        {{ range $index, $network := $container.Networks }}
+            {{ if eq $network.Name "haproxy" }}
+                {{ if eq $addrlen 1 }}
+                    {{ $addr := index $container.Addresses 0 }}
+	server http_{{ replace $network.IP "." "" -1 }} {{ $network.IP }}:{{ $addr.Port }}
+                {{ end }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
+backend https_{{ $host }}
+	balance roundrobin
+    {{ range $index, $container := $containers }}
+        {{ $addrlen := len $container.Addresses }}
+        {{ range $index, $network := $container.Networks }}
+            {{ if eq $network.Name "haproxy" }}
+                {{ if eq $addrlen 1 }}
+                    {{ $addr := index $container.Addresses 0 }}
+	server https_{{ replace $network.IP "." "" -1 }} {{ $network.IP }}:{{ $addr.Port }}
+                {{ end }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}

@@ -1,0 +1,22 @@
+version: '3.7'
+services:
+{{ range $tls, $containers := groupBy $ "Env.TLS"}}
+    http-verification-{{ $tls }}:
+        image: karlyan/docker-gen-cert-nginx
+        volumes:
+            - "nginx-srv:/var/www/acme:ro"
+        environment:
+            - "VIRTUAL_HOST={{ range $container := $containers }}{{ $container.Env.VIRTUAL_HOST }}{{ if ne $container last $containers }},{{ end }}{{ end }}"
+        networks:
+            - haproxy-net
+{{ end }}
+
+networks:
+    haproxy-net:
+        external:
+            name: haproxy
+
+volumes:
+    nginx-srv:
+        external:
+            name: docker-gen-cert_nginx-srv
