@@ -20,26 +20,33 @@ defaults
 {{ $http_containers := whereNotExist $outgoing_containers "Env.TLS" }}
 {{ $https_containers := whereExist $outgoing_containers "Env.TLS" }}
 
+acl letsencrypt-acl path_beg /.well-known/acme-challenge/
+
+{{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
+acl http_{{ $host }} hdr(host) -i {{ $host }}
+{{ end }}
+
+{{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
+acl https_{{ $host }} hdr(host) -i {{ $host }}
+{{ end }}
+
+
 ############
 # Frontend #
 ############
 
 frontend http_in
 	bind *:80
-{{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
-	acl http_{{ $host }} hdr_reg(host) -i {{ $host }}
-{{ end }}
 
+    use_backend letsencrypt if letsencrypt-acl
 {{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
 	use_backend http_{{ $host }} if http_{{ $host }}
 {{ end }}
+	http-request redirect scheme https if https_{{ $host }}
 
 
 frontend https_in
 	bind *:443 ssl crt /crt/cert.pem alpn h2,http/1.1
-{{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
-	acl https_{{ $host }} hdr(host) -i {{ $host }}
-{{ end }}
 
 {{ range $host, $containers := groupByMulti $https_containers "Env.VIRTUAL_HOST" "," }}
 	use_backend https_{{ $host }} if https_{{ $host }}
@@ -48,6 +55,9 @@ frontend https_in
 ############
 # Backends #
 ############
+
+backend letsencrypt
+    server docker_gen_letsencrypt
 
 {{ range $host, $containers := groupByMulti $http_containers "Env.VIRTUAL_HOST" "," }}
 backend http_{{ $host }}
