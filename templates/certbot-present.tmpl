@@ -1,0 +1,3 @@
+{{ range $certbot, $containers := groupBy $ "Env.CERTBOT"}}
+{{ $certbot }}
+{{ end }}
