@@ -3,12 +3,14 @@
 domains = {{ range $container := $containers }}{{ $container.Env.VIRTUAL_HOST }}{{ if ne $container.Name $last_cont.Name }},{{ end }}{{ end }}
 {{ end }}
 
-staging = True
+fullchain-path = /crt
+key-path = /crt
 
 noninteractive = True
-text = True
 preferred-challenges = http-01
 expand = True
+renew-by-default = True
+dry-run = False
 
 rsa-key-size = 4096
 

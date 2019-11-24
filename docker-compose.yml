@@ -1,5 +1,16 @@
 version: '3.7'
 services:
+  nginx:
+    container_name: docker_gen_letsencrypt
+    image: alpine/nginx
+    volumes:
+      - "well-known:/var/www/acme:ro"
+      - "./default.conf:/etc/nginx/conf.d/default.conf:ro"
+    networks:
+      - backend-net
+    environment:
+      - "VIRTUAL_HOST=karlyan.me"
+
   docker_gen:
     image: alpine/docker-gen
     volumes:
@@ -14,6 +25,7 @@ services:
     container_name: docker_gen_haproxy
     depends_on: 
       - docker_gen
+      - nginx
     image: alpine/haproxy
     volumes:
       - "haconfig:/etc/haproxy/:ro"
@@ -25,19 +37,9 @@ services:
       - "443:443"
     command: "-f /etc/haproxy/haproxy.cfg"
 
-  nginx:
-    container_name: docker_gen_letsencrypt
-    depends_on:
-      - docker_gen
-      - haproxy
-    image: alpine/enginx
-    volumes:
-      - "well-known:/var/www/acme:ro"
-      - "./default.conf:/etc/nginx/conf.d/default.conf:ro"
-    networks:
-      - backend-net
 
-  docker_gen-cert:
+  certbot:
+    container_name: docker_gen_certbot
     depends_on: 
       - haproxy
       - nginx
@@ -45,8 +47,10 @@ services:
     image: alpine/certbot
     volumes:
       - "./certbot:/etc/letsencrypt"
-      - "./haproxy-crt:/crt"
+      - "./haproxy-crt:/haproxy-crt"
       - "well-known:/srv"
+    environment:
+      - "CERTBOT=True"
 
 networks:
   backend-net:
