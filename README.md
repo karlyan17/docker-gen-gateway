@@ -4,5 +4,5 @@ Docker gateway is a reverse proxy setup with ssl support and automatic letsencry
 
 ## Installation
 
-To install pull all the submodules and build every container with `make` starting from docker-alpine.
+To install pull all the submodules and build every container with `make` starting from docker-alpine. (maybe create missing subdirectories)
 Finally run `docker-compose up`
