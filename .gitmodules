@@ -1,0 +1,15 @@
+[submodule "docker-alpine"]
+	path = docker-alpine
+	url = https://github.com/karlyan17/docker-alpine
+[submodule "docker-alpine-nginx"]
+	path = docker-alpine-nginx
+	url = https://github.com/karlyan17/docker-alpine-nginx
+[submodule "docker-alpine-haproxy"]
+	path = docker-alpine-haproxy
+	url = https://github.com/karlyan17/docker-alpine-haproxy
+[submodule "docker-alpine-certbot"]
+	path = docker-alpine-certbot
+	url = https://github.com/karlyan17/docker-alpine-certbot.git
+[submodule "docker-gen"]
+	path = docker-gen
+	url = https://github.com/karlyan17/docker-gen
